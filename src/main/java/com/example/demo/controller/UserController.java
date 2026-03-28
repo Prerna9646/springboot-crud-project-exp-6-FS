@@ -1,24 +1,25 @@
 package com.example.demo.controller;
 
-
 import com.example.demo.model.User;
 import com.example.demo.repository.UserRepository;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/user")
 public class UserController {
 
     @Autowired
-    UserRepository userRepository;
+    private UserRepository userRepository;
 
     @PostMapping("/register")
-    public ResponseEntity<User> registerUser(@RequestBody User user) {
+    public ResponseEntity<User> register(@RequestBody User user) {
         User savedUser = userRepository.save(user);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
     }
@@ -27,5 +28,43 @@ public class UserController {
     public ResponseEntity<List<User>> getAllUsers() {
         List<User> users = userRepository.findAll();
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(userRepository.findAll());
+    }
+    @GetMapping("/{id}")
+    public ResponseEntity<User> getUser(@PathVariable long id){
+        Optional<User> user= userRepository.findById(id);
+        return user.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable long id){
+        if(userRepository.existsById(id)){
+            userRepository.deleteById((id));
+            return ResponseEntity.noContent().build();
+        }else{
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PutMapping("/update/{id}")
+    public ResponseEntity<User> updateUser(@PathVariable long id ,@Valid @RequestBody User userDetails) {
+        return userRepository.findById(id).map(
+                existingUser ->
+
+                {
+                    existingUser.setName(userDetails.getName());
+                    existingUser.setEmail(userDetails.getEmail());
+                    existingUser.setPassword(userDetails.getPassword());
+                    existingUser.setMobile(userDetails.getMobile());
+                    User updatedUser = userRepository.save(existingUser);
+                    return ResponseEntity.ok().body(updatedUser);
+                }
+        ).orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/email/{email}")
+    public ResponseEntity<User> getByEmail(@PathVariable String email) {
+        return userRepository.findByEmail(email)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }
